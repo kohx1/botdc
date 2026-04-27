@@ -8,11 +8,10 @@ module.exports = {
 
     const estados = [
       { type: ActivityType.Watching, text: '⚡ Online 24/7' },
-      { type: ActivityType.Playing, text: '🎮 con la comunidad' },
-      { type: ActivityType.Watching, text: '🛡️ protegiendo el server' },
-      { type: ActivityType.Listening, text: '🎵 música no stop' },
-      { type: ActivityType.Watching, text: '🔧 los tickets en vivo' },
-      { type: ActivityType.Watching, text: '🌐 el servidor 24/7' },
+      { type: ActivityType.Playing, text: '🎮 Con la comunidad' },
+      { type: ActivityType.Watching, text: '🛡️ Protegiendo el server' },
+      { type: ActivityType.Watching, text: '🔧 Los tickets en vivo' },
+      { type: ActivityType.Watching, text: '🌐 El servidor 24/7' },
     ];
 
     let i = 0;
