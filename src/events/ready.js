@@ -1,3 +1,5 @@
+const { ActivityType } = require('discord.js');
+
 module.exports = {
   name: 'ready',
   once: true,
@@ -5,12 +7,12 @@ module.exports = {
     console.log(`✅ Bot conectado como ${client.user.tag}`);
 
     const estados = [
-      { type: 3, text: '🌐 el servidor 24/7' },
-      { type: 0, text: '🎮 con la comunidad' },
-      { type: 3, text: '🔧 los tickets en vivo' },
-      { type: 2, text: '🎵 música no stop' },
-      { type: 3, text: '⚡ Online 24/7' },
-      { type: 3, text: '🛡️ protegiendo el server' },
+      { type: ActivityType.Watching, text: '⚡ Online 24/7' },
+      { type: ActivityType.Playing, text: '🎮 con la comunidad' },
+      { type: ActivityType.Watching, text: '🛡️ protegiendo el server' },
+      { type: ActivityType.Listening, text: '🎵 música no stop' },
+      { type: ActivityType.Watching, text: '🔧 los tickets en vivo' },
+      { type: ActivityType.Watching, text: '🌐 el servidor 24/7' },
     ];
 
     let i = 0;
@@ -24,6 +26,6 @@ module.exports = {
     };
 
     cambiarEstado();
-    setInterval(cambiarEstado, 10000);
+    setInterval(cambiarEstado, 15000);
   }
 };
