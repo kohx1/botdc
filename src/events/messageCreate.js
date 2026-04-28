@@ -1,3 +1,7 @@
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, QuickDB: QDB } = require('discord.js');
+const { QuickDB } = require('quick.db');
+const db = new QuickDB();
+
 module.exports = {
   name: 'messageCreate',
   async execute(message) {
@@ -12,11 +16,23 @@ module.exports = {
       return;
     }
 
-    // Comandos con prefijo !
-    const prefix = process.env.PREFIX || '!';
-    if (!message.content.startsWith(prefix)) return;
+    // Respuestas automáticas
+    const contenido = message.content.toLowerCase();
+    if (contenido === 'hola') message.reply('¡Hola! ¿En qué te puedo ayudar?');
+    if (contenido === 'ping') message.reply('🏓 Pong!');
 
-    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    // Prefijo ! o mención al bot
+    const prefix = process.env.PREFIX || '!';
+    const botMention = `<@${message.client.user.id}>`;
+    const botMention2 = `<@!${message.client.user.id}>`;
+
+    let usedPrefix = null;
+    if (message.content.startsWith(prefix)) usedPrefix = prefix;
+    else if (message.content.startsWith(botMention)) usedPrefix = botMention;
+    else if (message.content.startsWith(botMention2)) usedPrefix = botMention2;
+    else return;
+
+    const args = message.content.slice(usedPrefix.length).trim().split(/ +/);
     const comando = args.shift().toLowerCase();
 
     // !ban @usuario razón
@@ -29,7 +45,6 @@ module.exports = {
       message.reply(`✅ **${usuario.user.tag}** fue baneado. Razón: ${razon}`);
     }
 
-    // !kick @usuario
     else if (comando === 'kick') {
       if (!message.member.permissions.has('KickMembers')) return message.reply('❌ No tienes permisos.');
       const usuario = message.mentions.members.first();
@@ -38,7 +53,6 @@ module.exports = {
       message.reply(`✅ **${usuario.user.tag}** fue expulsado.`);
     }
 
-    // !clear 10
     else if (comando === 'clear') {
       if (!message.member.permissions.has('ManageMessages')) return message.reply('❌ No tienes permisos.');
       const cantidad = parseInt(args[0]);
@@ -48,7 +62,6 @@ module.exports = {
       setTimeout(() => aviso.delete(), 3000);
     }
 
-    // !mute @usuario 10
     else if (comando === 'mute') {
       if (!message.member.permissions.has('ModerateMembers')) return message.reply('❌ No tienes permisos.');
       const usuario = message.mentions.members.first();
@@ -58,7 +71,6 @@ module.exports = {
       message.reply(`✅ **${usuario.user.tag}** silenciado por ${minutos} minutos.`);
     }
 
-    // !add ID
     else if (comando === 'add') {
       if (!message.member.permissions.has('ManageChannels')) return message.reply('❌ No tienes permisos.');
       const id = args[0];
@@ -73,33 +85,182 @@ module.exports = {
       message.reply(`✅ ${member} fue agregado al ticket.`);
     }
 
-    // !nivel @usuario
     else if (comando === 'nivel' || comando === 'rank') {
-      const { QuickDB } = require('quick.db');
-      const db = new QuickDB();
       const usuario = message.mentions.users.first() || message.author;
       const xp = await db.get(`xp_${message.guild.id}_${usuario.id}`) || 0;
       const nivel = await db.get(`nivel_${message.guild.id}_${usuario.id}`) || 0;
-      message.reply(`⭐ **${usuario.username}** — Nivel: **${nivel}** | XP: **${xp}**`);
+      const xpSiguiente = (nivel + 1) * 100;
+      const progreso = Math.floor((xp / xpSiguiente) * 20);
+      const barra = '█'.repeat(progreso) + '░'.repeat(20 - progreso);
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle(`⭐ Nivel de ${usuario.username}`)
+        .setThumbnail(usuario.displayAvatarURL())
+        .addFields(
+          { name: '⭐ Nivel', value: `${nivel}`, inline: true },
+          { name: '✨ XP', value: `${xp} / ${xpSiguiente}`, inline: true },
+          { name: '📊 Progreso', value: `\`${barra}\``, inline: false },
+        )
+        .setTimestamp();
+      message.reply({ embeds: [embed] });
     }
 
-    // !ping
+    else if (comando === 'balance' || comando === 'bal') {
+      const usuario = message.mentions.users.first() || message.author;
+      const monedas = await db.get(`monedas_${message.guild.id}_${usuario.id}`) || 0;
+      const embed = new EmbedBuilder()
+        .setColor('#FFD700')
+        .setTitle(`💰 Balance de ${usuario.username}`)
+        .addFields({ name: 'Monedas', value: `${monedas} 🪙`, inline: true })
+        .setTimestamp();
+      message.reply({ embeds: [embed] });
+    }
+
+    else if (comando === 'daily') {
+      const ultimo = await db.get(`daily_${message.guild.id}_${message.author.id}`) || 0;
+      const ahora = Date.now();
+      const cooldown = 86400000;
+      if (ahora - ultimo < cooldown) {
+        const restante = Math.ceil((cooldown - (ahora - ultimo)) / 3600000);
+        return message.reply(`⏰ Ya reclamaste tu daily. Vuelve en **${restante} horas**.`);
+      }
+      const ganado = Math.floor(Math.random() * 500) + 100;
+      const monedas = await db.get(`monedas_${message.guild.id}_${message.author.id}`) || 0;
+      await db.set(`monedas_${message.guild.id}_${message.author.id}`, monedas + ganado);
+      await db.set(`daily_${message.guild.id}_${message.author.id}`, ahora);
+      message.reply(`💰 Recibiste **${ganado} 🪙**! Balance: **${monedas + ganado} 🪙**`);
+    }
+
+    else if (comando === 'top') {
+      const todos = await db.all();
+      const filtrados = todos
+        .filter(e => e.id.startsWith(`claims_${message.guild.id}_`))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+      if (filtrados.length === 0) return message.reply('❌ Nadie ha reclamado tickets aún.');
+      const lista = await Promise.all(filtrados.map(async (e, i) => {
+        const id = e.id.replace(`claims_${message.guild.id}_`, '');
+        const user = await message.client.users.fetch(id).catch(() => null);
+        const medalla = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i + 1}.**`;
+        return `${medalla} ${user ? user.tag : 'Usuario'} — **${e.value}** tickets`;
+      }));
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('🏆 Top Staff — Tickets Atendidos')
+        .setDescription(lista.join('\n'))
+        .setTimestamp();
+      message.reply({ embeds: [embed] });
+    }
+
+    else if (comando === 'panel') {
+      if (!message.member.permissions.has('Administrator')) return message.reply('❌ No tienes permisos.');
+      const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('🎫 Sistema de Tickets')
+        .setDescription(
+          '🔧 **SOPORTE TÉCNICO**\nResponderemos tus dudas y preguntas.\n\n' +
+          '📋 **REPORTAR JUGADOR**\nReporta a un jugador que rompa las reglas.\n\n' +
+          '⚠️ **REPORTE DE BUG**\nReporta cualquier bug del servidor.\n\n' +
+          '💻 **SANCIONES & ANTICHEAT**\nApela tu sanción aquí con pruebas.\n\n' +
+          '💰 **PAGOS TIENDA**\n¿Tienes problema con la tienda? Te ayudamos.\n\n' +
+          '💀 **SOLICITAR REVIVE**\nSolicita un revive si moriste por un problema.'
+        )
+        .setFooter({ text: message.guild.name, iconURL: message.guild.iconURL() })
+        .setTimestamp();
+      const menu = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('ticket_categoria')
+          .setPlaceholder('Click para seleccionar categoría')
+          .addOptions([
+            { label: 'Soporte Técnico', description: 'Responderemos tus dudas y preguntas', value: 'soporte', emoji: '🔧' },
+            { label: 'Reportar jugador', description: 'Reporta a un jugador', value: 'reporte_jugador', emoji: '📋' },
+            { label: 'Reporte de bug', description: 'Reporta cualquier bug del servidor', value: 'bug', emoji: '⚠️' },
+            { label: 'Sanciones & Anticheat', description: 'Apela tu sanción aquí', value: 'sancion', emoji: '💻' },
+            { label: 'Pagos tienda', description: 'Problema con la tienda', value: 'pagos', emoji: '💰' },
+            { label: 'Solicitar revive', description: 'Solicita un revive', value: 'revive', emoji: '💀' },
+          ])
+      );
+      await message.channel.send({ embeds: [embed], components: [menu] });
+      await message.delete().catch(() => {});
+    }
+
+    else if (comando === 'logs') {
+      if (!message.member.permissions.has('Administrator')) return message.reply('❌ No tienes permisos.');
+      const canal = message.mentions.channels.first();
+      if (!canal) return message.reply('❌ Usa: `!logs #canal`');
+      await db.set(`logs_${message.guild.id}`, canal.id);
+      message.reply(`✅ Logs activados en ${canal}`);
+    }
+
+    else if (comando === 'verificar') {
+      if (!message.member.permissions.has('Administrator')) return message.reply('❌ No tienes permisos.');
+      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+      const nombreRol = args.join(' ');
+      if (!nombreRol) return message.reply('❌ Usa: `!verificar NombreDelRol`');
+      const rol = message.guild.roles.cache.find(r => r.name === nombreRol);
+      if (!rol) return message.reply(`❌ No existe el rol **${nombreRol}**.`);
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('✅ Verificación')
+        .setDescription('Haz clic en el botón de abajo para verificarte y acceder al servidor.')
+        .setTimestamp();
+      const boton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`verificar_${rol.id}`)
+          .setLabel('✅ Verificarme')
+          .setStyle(ButtonStyle.Success)
+      );
+      await message.channel.send({ embeds: [embed], components: [boton] });
+      await message.delete().catch(() => {});
+    }
+
+    else if (comando === 'roles') {
+      if (!message.member.permissions.has('Administrator')) return message.reply('❌ No tienes permisos.');
+      const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+      const nombresRoles = args.join(' ').split(',').map(r => r.trim());
+      const rolesEncontrados = nombresRoles.map(nombre =>
+        message.guild.roles.cache.find(r => r.name === nombre)
+      ).filter(Boolean);
+      if (rolesEncontrados.length === 0) return message.reply('❌ No se encontró ningún rol. Usa: `!roles Rol1, Rol2`');
+      const opciones = rolesEncontrados.map(rol => ({
+        label: rol.name, value: rol.id, description: `Obtener o quitar ${rol.name}`,
+      }));
+      const menu = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('menu_roles')
+          .setPlaceholder('Selecciona un rol...')
+          .setMinValues(0)
+          .setMaxValues(opciones.length)
+          .addOptions(opciones)
+      );
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('🎭 Panel de Roles')
+        .setDescription('Selecciona los roles que quieres obtener o quitar.')
+        .addFields({ name: 'Roles disponibles', value: rolesEncontrados.map(r => `• ${r}`).join('\n') })
+        .setTimestamp();
+      await message.channel.send({ embeds: [embed], components: [menu] });
+      await message.delete().catch(() => {});
+    }
+
     else if (comando === 'ping') {
       message.reply(`🏓 Pong! **${message.client.ws.ping}ms**`);
     }
 
-    // !help
     else if (comando === 'help') {
-      message.reply(
-        '📋 **Comandos disponibles:**\n' +
-        '`!ban @usuario razón` — Banear\n' +
-        '`!kick @usuario` — Expulsar\n' +
-        '`!mute @usuario minutos` — Silenciar\n' +
-        '`!clear cantidad` — Eliminar mensajes\n' +
-        '`!add ID` — Agregar al ticket\n' +
-        '`!nivel @usuario` — Ver nivel\n' +
-        '`!ping` — Ver latencia'
-      );
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('📋 Comandos del Bot')
+        .setDescription('Usa `!comando` o menciona al bot `@Bot comando`')
+        .addFields(
+          { name: '🛡️ Moderación', value: '`!ban @user razón` `!kick @user` `!mute @user min` `!clear N`', inline: false },
+          { name: '🎫 Tickets', value: '`!panel` `!add ID`', inline: false },
+          { name: '⚙️ Config', value: '`!logs #canal` `!verificar Rol` `!roles Rol1, Rol2`', inline: false },
+          { name: '📊 Info', value: '`!nivel @user` `!balance @user` `!daily` `!top` `!ping`', inline: false },
+        )
+        .setTimestamp();
+      message.reply({ embeds: [embed] });
     }
   }
 };
