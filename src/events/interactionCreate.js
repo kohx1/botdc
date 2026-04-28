@@ -3,12 +3,55 @@ const { QuickDB } = require('quick.db');
 const db = new QuickDB();
 
 const categorias = {
-  soporte: { nombre: 'Soporte Técnico', emoji: '🔧', preguntas: ['¿Cuál es tu nick?', '¿Cuál es tu duda?'] },
-  reporte_jugador: { nombre: 'Reportar Jugador', emoji: '📋', preguntas: ['¿Cuál es tu nick?', '¿A quién reportas y por qué?'] },
-  bug: { nombre: 'Reporte de Bug', emoji: '⚠️', preguntas: ['¿Cuál es tu nick?', '¿Qué bug encontraste?'] },
-  sancion: { nombre: 'Sanciones & Anticheat', emoji: '💻', preguntas: ['¿Cuál es tu nick?', '¿Por qué apelas tu sanción?'] },
-  pagos: { nombre: 'Pagos Tienda', emoji: '💰', preguntas: ['¿Cuál es tu nick?', '¿Cuál es tu problema con la tienda?'] },
-  revive: { nombre: 'Solicitar Revive', emoji: '💀', preguntas: ['¿Cuál es tu nick?', '¿Cómo y dónde moriste?'] },
+  soporte: {
+    nombre: 'Soporte Técnico', emoji: '🔧',
+    campos: [
+      { id: 'nick', label: '¿Cuál es tu nick?', placeholder: 'Escribe tu nombre en el servidor.', style: 1, required: true },
+      { id: 'descripcion', label: '¿Cuál es tu duda?', placeholder: 'Explica cómo podemos ayudarte.', style: 2, required: true },
+    ]
+  },
+  reporte_jugador: {
+    nombre: 'Reportar Jugador', emoji: '📋',
+    campos: [
+      { id: 'nick', label: '¿Cuál es tu nick?', placeholder: 'Escribe tu nombre en el servidor.', style: 1, required: true },
+      { id: 'reportado', label: 'Nick del usuario que reportas', placeholder: 'Escribe el nick del jugador a reportar.', style: 1, required: true },
+      { id: 'razon', label: '¿Por qué lo reportas?', placeholder: 'Explica el motivo del reporte con detalle.', style: 2, required: true },
+      { id: 'pruebas', label: '¿Tienes pruebas? (fotos, videos, etc)', placeholder: 'Describe o pega links de tus pruebas.', style: 2, required: false },
+    ]
+  },
+  bug: {
+    nombre: 'Reporte de Bug', emoji: '⚠️',
+    campos: [
+      { id: 'nick', label: '¿Cuál es tu nick?', placeholder: 'Escribe tu nombre en el servidor.', style: 1, required: true },
+      { id: 'bug', label: '¿Qué bug encontraste?', placeholder: 'Describe el bug con el mayor detalle posible.', style: 2, required: true },
+      { id: 'pasos', label: '¿Cómo se reproduce el bug?', placeholder: 'Explica los pasos para reproducirlo.', style: 2, required: false },
+    ]
+  },
+  sancion: {
+    nombre: 'Sanciones & Anticheat', emoji: '💻',
+    campos: [
+      { id: 'nick', label: '¿Cuál es tu nick?', placeholder: 'Escribe tu nombre en el servidor.', style: 1, required: true },
+      { id: 'modalidad', label: 'Modalidad, fecha y staff que sancionó', placeholder: 'En qué modalidad, cuándo y quién te sancionó.', style: 1, required: true },
+      { id: 'motivo', label: '¿Por qué fuiste sancionado?', placeholder: 'Explica en qué consiste tu sanción.', style: 2, required: true },
+      { id: 'apelacion', label: '¿Por qué estás apelando?', placeholder: 'Explica por qué deberíamos remover tu sanción.', style: 2, required: true },
+    ]
+  },
+  pagos: {
+    nombre: 'Pagos Tienda', emoji: '💰',
+    campos: [
+      { id: 'nick', label: '¿Cuál es tu nick?', placeholder: 'Escribe tu nombre en el servidor.', style: 1, required: true },
+      { id: 'problema', label: '¿Cuál es tu problema con la tienda?', placeholder: 'Describe tu problema con detalle.', style: 2, required: true },
+      { id: 'comprobante', label: '¿Tienes comprobante de pago?', placeholder: 'Pega el link o describe tu comprobante.', style: 2, required: false },
+    ]
+  },
+  revive: {
+    nombre: 'Solicitar Revive', emoji: '💀',
+    campos: [
+      { id: 'nick', label: '¿Cuál es tu nick?', placeholder: 'Escribe tu nombre en el servidor.', style: 1, required: true },
+      { id: 'donde', label: '¿Dónde y cómo moriste?', placeholder: 'Explica el lugar y la situación.', style: 2, required: true },
+      { id: 'pruebas', label: '¿Tienes pruebas?', placeholder: 'Describe o pega links de tus pruebas.', style: 2, required: false },
+    ]
+  },
 };
 
 module.exports = {
@@ -38,25 +81,18 @@ module.exports = {
         .setCustomId(`ticket_modal_${categoria}`)
         .setTitle(info.nombre);
 
-      const nick = new TextInputBuilder()
-        .setCustomId('nick')
-        .setLabel(info.preguntas[0])
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Escribe aquí tu nombre en el servidor.')
-        .setRequired(true);
+      const camposAUsar = info.campos.slice(0, 5);
 
-      const descripcion = new TextInputBuilder()
-        .setCustomId('descripcion')
-        .setLabel(info.preguntas[1])
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Explica como podemos ayudarte.')
-        .setMaxLength(1024)
-        .setRequired(true);
+      for (const campo of camposAUsar) {
+        const input = new TextInputBuilder()
+          .setCustomId(campo.id)
+          .setLabel(campo.label)
+          .setStyle(campo.style)
+          .setPlaceholder(campo.placeholder)
+          .setRequired(campo.required);
 
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(nick),
-        new ActionRowBuilder().addComponents(descripcion)
-      );
+        modal.addComponents(new ActionRowBuilder().addComponents(input));
+      }
 
       await interaction.showModal(modal);
       return;
@@ -66,8 +102,6 @@ module.exports = {
     if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket_modal_')) {
       const categoria = interaction.customId.replace('ticket_modal_', '');
       const info = categorias[categoria];
-      const nick = interaction.fields.getTextInputValue('nick');
-      const descripcion = interaction.fields.getTextInputValue('descripcion');
 
       await interaction.deferReply({ ephemeral: true });
 
@@ -77,6 +111,18 @@ module.exports = {
       if (ticketExistente) {
         return interaction.editReply({ content: `❌ Ya tienes un ticket abierto: ${ticketExistente}` });
       }
+
+      const nick = interaction.fields.getTextInputValue('nick');
+
+      // Recoger todos los campos del formulario
+      const resumen = info.campos.map(campo => {
+        try {
+          const valor = interaction.fields.getTextInputValue(campo.id);
+          return `**${campo.label}**\n${valor}`;
+        } catch {
+          return null;
+        }
+      }).filter(Boolean).join('\n\n');
 
       const contador = (await db.get(`ticket_contador_${interaction.guild.id}`)) || 0;
       const nuevoContador = contador + 1;
@@ -95,20 +141,19 @@ module.exports = {
         userId: interaction.user.id,
         categoria,
         nick,
-        descripcion,
+        resumen,
         numero: nuevoContador,
         claimedBy: null,
         abierto: true,
-        mensajes: [],
       });
 
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
         .setTitle(`${info.emoji} ${info.nombre} — #${nuevoContador}`)
+        .setDescription(resumen)
         .addFields(
           { name: '👤 Usuario', value: `${interaction.user}`, inline: true },
           { name: '🎮 Nick', value: nick, inline: true },
-          { name: '📝 Descripción', value: descripcion, inline: false },
         )
         .setFooter({ text: 'El staff te atenderá pronto.' })
         .setTimestamp();
@@ -155,7 +200,6 @@ module.exports = {
 
       await interaction.deferReply();
 
-      // Generar transcript
       const mensajes = await interaction.channel.messages.fetch({ limit: 100 });
       const transcript = mensajes.reverse().map(m =>
         `[${new Date(m.createdTimestamp).toLocaleString()}] ${m.author.tag}: ${m.content}`
@@ -166,8 +210,9 @@ module.exports = {
         { name: `transcript-${interaction.channel.name}.txt` }
       );
 
-      // Buscar canal de logs
-      const logsCanal = interaction.guild.channels.cache.find(c => c.name === 'ticket-logs' || c.name === 'logs-tickets');
+      const logsCanal = interaction.guild.channels.cache.find(
+        c => c.name === 'ticket-logs' || c.name === 'logs-tickets'
+      );
 
       const embedCierre = new EmbedBuilder()
         .setColor('#FF0000')
