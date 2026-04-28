@@ -1,11 +1,10 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('add')
     .setDescription('Agregar a alguien al ticket')
-    .addUserOption(opt => opt.setName('usuario').setDescription('Usuario a agregar').setRequired(true))
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+    .addUserOption(opt => opt.setName('usuario').setDescription('Usuario a agregar').setRequired(true)),
 
   async execute(interaction) {
     const usuario = interaction.options.getUser('usuario');
@@ -15,8 +14,10 @@ module.exports = {
     await interaction.channel.permissionOverwrites.edit(member.id, {
       ViewChannel: true,
       SendMessages: true,
+      ReadMessageHistory: true,
+      AttachFiles: true,
     });
 
-    await interaction.reply({ content: `✅ ${usuario} fue agregado al ticket.` });
+    await interaction.reply({ content: `✅ ${usuario} fue agregado al ticket. Ya puede ver este canal.` });
   }
 };
