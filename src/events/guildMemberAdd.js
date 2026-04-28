@@ -2,9 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'guildMemberAdd',
-  async execute(member) {
-    const canal = member.guild.channels.cache.find(c => c.name === 'bienvenidas');
-    if (!canal) return;
+  async execute(member, client) {
+    const canalBienvenida = member.guild.channels.cache.get(process.env.WELCOME_CHANNEL);
+    if (!canalBienvenida) return;
 
     const embed = new EmbedBuilder()
       .setColor('#5865F2')
@@ -20,7 +20,7 @@ module.exports = {
       .setFooter({ text: `ID: ${member.id}` })
       .setTimestamp();
 
-    await canal.send({ content: `${member}`, embeds: [embed] });
+    await canalBienvenida.send({ content: `${member}`, embeds: [embed] });
 
     const rol = member.guild.roles.cache.find(r => r.name === 'Miembro');
     if (rol) await member.roles.add(rol);
