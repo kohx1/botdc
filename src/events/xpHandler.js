@@ -1,5 +1,5 @@
-const { QuickDB } = require('quick.db');
 const { EmbedBuilder } = require('discord.js');
+const { QuickDB } = require('quick.db');
 const db = new QuickDB();
 
 module.exports = {
@@ -9,7 +9,6 @@ module.exports = {
 
     const userId = message.author.id;
     const guildId = message.guild.id;
-
     const cooldown = await db.get(`cooldown_${guildId}_${userId}`);
     const ahora = Date.now();
     if (cooldown && ahora - cooldown < 60000) return;

@@ -11,6 +11,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildPresences,
   ]
 });
 
@@ -27,7 +28,11 @@ for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) 
 const eventsPath = path.join(__dirname, 'events');
 for (const file of fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))) {
   const event = require(path.join(eventsPath, file));
-  if (event.once) {
+  if (Array.isArray(event)) {
+    for (const e of event) {
+      client.on(e.name, (...args) => e.execute(...args, client));
+    }
+  } else if (event.once) {
     client.once(event.name, (...args) => event.execute(...args, client));
   } else {
     client.on(event.name, (...args) => event.execute(...args, client));

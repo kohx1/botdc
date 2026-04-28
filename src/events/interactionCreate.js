@@ -1,4 +1,4 @@
-const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits, AttachmentBuilder } = require('discord.js');
+const { ModalBuilder, TextInputBuilder, ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits, AttachmentBuilder } = require('discord.js');
 const { QuickDB } = require('quick.db');
 const db = new QuickDB();
 
@@ -58,7 +58,6 @@ module.exports = {
   name: 'interactionCreate',
   async execute(interaction, client) {
 
-    // ── Comandos slash ──
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
@@ -72,7 +71,6 @@ module.exports = {
       return;
     }
 
-    // ── Menú de categoría de ticket ──
     if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_categoria') {
       const categoria = interaction.values[0];
       const info = categorias[categoria];
@@ -81,16 +79,13 @@ module.exports = {
         .setCustomId(`ticket_modal_${categoria}`)
         .setTitle(info.nombre);
 
-      const camposAUsar = info.campos.slice(0, 5);
-
-      for (const campo of camposAUsar) {
+      for (const campo of info.campos.slice(0, 5)) {
         const input = new TextInputBuilder()
           .setCustomId(campo.id)
           .setLabel(campo.label)
           .setStyle(campo.style)
           .setPlaceholder(campo.placeholder)
           .setRequired(campo.required);
-
         modal.addComponents(new ActionRowBuilder().addComponents(input));
       }
 
@@ -98,7 +93,6 @@ module.exports = {
       return;
     }
 
-    // ── Modal enviado → crear canal de ticket ──
     if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket_modal_')) {
       const categoria = interaction.customId.replace('ticket_modal_', '');
       const info = categorias[categoria];
@@ -113,15 +107,11 @@ module.exports = {
       }
 
       const nick = interaction.fields.getTextInputValue('nick');
-
-      // Recoger todos los campos del formulario
       const resumen = info.campos.map(campo => {
         try {
           const valor = interaction.fields.getTextInputValue(campo.id);
           return `**${campo.label}**\n${valor}`;
-        } catch {
-          return null;
-        }
+        } catch { return null; }
       }).filter(Boolean).join('\n\n');
 
       const contador = (await db.get(`ticket_contador_${interaction.guild.id}`)) || 0;
@@ -163,12 +153,17 @@ module.exports = {
         new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('🔒 Cerrar').setStyle(ButtonStyle.Danger),
       );
 
-      await canal.send({ content: `${interaction.user}`, embeds: [embed], components: [botones] });
+      const staffRole = interaction.guild.roles.cache.find(r => r.permissions.has('Administrator') && r.name !== '@everyone');
+      await canal.send({
+        content: `${interaction.user} ${staffRole ? staffRole : ''}\n\n> ⏳ Por favor sé paciente, un miembro del staff te atenderá lo más pronto posible.`,
+        embeds: [embed],
+        components: [botones]
+      });
+
       await interaction.editReply({ content: `✅ Tu ticket fue creado: ${canal}` });
       return;
     }
 
-    // ── Botón: Reclamar ticket ──
     if (interaction.isButton() && interaction.customId === 'claim_ticket') {
       const data = await db.get(`ticket_${interaction.channel.id}`);
       if (!data) return interaction.reply({ content: '❌ No se encontró info de este ticket.', ephemeral: true });
@@ -193,7 +188,6 @@ module.exports = {
       return;
     }
 
-    // ── Botón: Cerrar ticket ──
     if (interaction.isButton() && interaction.customId === 'cerrar_ticket') {
       const data = await db.get(`ticket_${interaction.channel.id}`);
       if (!data) return interaction.reply({ content: '❌ No se encontró info de este ticket.', ephemeral: true });
@@ -224,16 +218,13 @@ module.exports = {
         )
         .setTimestamp();
 
-      if (logsCanal) {
-        await logsCanal.send({ embeds: [embedCierre], files: [archivo] });
-      }
+      if (logsCanal) await logsCanal.send({ embeds: [embedCierre], files: [archivo] });
 
       await interaction.editReply({ content: '🔒 Cerrando ticket en 5 segundos...' });
       setTimeout(() => interaction.channel.delete(), 5000);
       return;
     }
 
-    // ── Menú de roles ──
     if (interaction.isStringSelectMenu() && interaction.customId === 'menu_roles') {
       const member = await interaction.guild.members.fetch(interaction.user.id);
       const seleccionados = interaction.values;
@@ -249,7 +240,6 @@ module.exports = {
       return;
     }
 
-    // ── Botón: Verificación ──
     if (interaction.isButton() && interaction.customId.startsWith('verificar_')) {
       const rolId = interaction.customId.replace('verificar_', '');
       const rol = interaction.guild.roles.cache.get(rolId);

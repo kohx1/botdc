@@ -8,15 +8,21 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor('#5865F2')
-      .setTitle('¡Bienvenido al servidor!')
-      .setDescription(`Hola ${member}! Eres el miembro **#${member.guild.memberCount}**.\nLee las reglas y disfruta tu estadía.`)
-      .setThumbnail(member.user.displayAvatarURL())
-      .setFooter({ text: member.guild.name })
+      .setAuthor({ name: member.guild.name, iconURL: member.guild.iconURL() })
+      .setTitle(`¡Bienvenido a ${member.guild.name}! 🎉`)
+      .setDescription(
+        `Hey ${member}, nos alegra tenerte aquí!\n\n` +
+        `📖 Lee las reglas antes de participar.\n` +
+        `🎫 Si necesitas ayuda abre un ticket.\n` +
+        `👥 Eres el miembro número **#${member.guild.memberCount}**`
+      )
+      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
+      .setFooter({ text: `ID: ${member.id}` })
       .setTimestamp();
 
-    canal.send({ embeds: [embed] });
+    await canal.send({ content: `${member}`, embeds: [embed] });
 
     const rol = member.guild.roles.cache.find(r => r.name === 'Miembro');
-    if (rol) member.roles.add(rol);
+    if (rol) await member.roles.add(rol);
   }
 };
