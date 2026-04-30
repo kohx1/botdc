@@ -243,7 +243,28 @@ module.exports = {
       await message.channel.send({ embeds: [embed], components: [menu] });
       await message.delete().catch(() => {});
     }
+else if (comando === 'testwelcome') {
+      const canal = message.guild.channels.cache.get(process.env.WELCOME_CHANNEL);
+      if (!canal) return message.reply('❌ Canal de bienvenidas no encontrado. Verifica el WELCOME_CHANNEL en .env');
+      
+      const { EmbedBuilder } = require('discord.js');
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setAuthor({ name: message.guild.name, iconURL: message.guild.iconURL() })
+        .setTitle(`¡Bienvenido a ${message.guild.name}! 🎉`)
+        .setDescription(
+          `Hey ${message.author}, nos alegra tenerte aquí!\n\n` +
+          `📖 Lee las reglas antes de participar.\n` +
+          `🎫 Si necesitas ayuda abre un ticket.\n` +
+          `👥 Eres el miembro número **#${message.guild.memberCount}**`
+        )
+        .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 256 }))
+        .setFooter({ text: `ID: ${message.author.id}` })
+        .setTimestamp();
 
+      await canal.send({ content: `${message.author}`, embeds: [embed] });
+      await message.reply('✅ Bienvenida de prueba enviada!');
+    }
     else if (comando === 'ping') {
       message.reply(`🏓 Pong! **${message.client.ws.ping}ms**`);
     }
@@ -263,4 +284,4 @@ module.exports = {
       message.reply({ embeds: [embed] });
     }
   }
-};
+}; 
