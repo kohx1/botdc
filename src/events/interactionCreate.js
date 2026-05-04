@@ -114,14 +114,26 @@ module.exports = {
       const nuevoContador = contador + 1;
       await db.set(`ticket_contador_${interaction.guild.id}`, nuevoContador);
 
-      const canal = await interaction.guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-          { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-        ],
-      });
+     // Roles que pueden ver tickets automáticamente
+const rolesStaff = ['Helper', 'Jr.Mod', 'Mod', 'Sr.Admin', 'Manager', 'Manager +', '!Manager +', 'Configurador', '!Founder', 'MineRush'];
+const permisosRoles = rolesStaff.map(nombreRol => {
+  const rol = interaction.guild.roles.cache.find(r => r.name === nombreRol);
+  if (!rol) return null;
+  return {
+    id: rol.id,
+    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+  };
+}).filter(Boolean);
+
+const canal = await interaction.guild.channels.create({
+  name: `ticket-${interaction.user.username}`,
+  type: ChannelType.GuildText,
+  permissionOverwrites: [
+    { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+    { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+    ...permisosRoles,
+  ],
+});
 
       await db.set(`ticket_${canal.id}`, {
         userId: interaction.user.id,
