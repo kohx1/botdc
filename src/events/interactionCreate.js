@@ -74,11 +74,9 @@ module.exports = {
     if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_categoria') {
       const categoria = interaction.values[0];
       const info = categorias[categoria];
-
       const modal = new ModalBuilder()
         .setCustomId(`ticket_modal_${categoria}`)
         .setTitle(info.nombre);
-
       for (const campo of info.campos.slice(0, 5)) {
         const input = new TextInputBuilder()
           .setCustomId(campo.id)
@@ -88,7 +86,6 @@ module.exports = {
           .setRequired(campo.required);
         modal.addComponents(new ActionRowBuilder().addComponents(input));
       }
-
       await interaction.showModal(modal);
       return;
     }
@@ -96,7 +93,6 @@ module.exports = {
     if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket_modal_')) {
       const categoria = interaction.customId.replace('ticket_modal_', '');
       const info = categorias[categoria];
-
       await interaction.deferReply({ ephemeral: true });
 
       const ticketExistente = interaction.guild.channels.cache.find(
@@ -150,12 +146,13 @@ module.exports = {
 
       const botones = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('claim_ticket').setLabel('📌 Reclamar').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('liberar_ticket').setLabel('🔓 Liberar').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('🔒 Cerrar').setStyle(ButtonStyle.Danger),
       );
 
-      const staffRole = interaction.guild.roles.cache.find(r => r.permissions.has('Administrator') && r.name !== '@everyone');
+      const helperRole = interaction.guild.roles.cache.find(r => r.name === 'Helper');
       await canal.send({
-        content: `${interaction.user} ${staffRole ? staffRole : ''}\n\n> ⏳ Por favor sé paciente, un miembro del staff te atenderá lo más pronto posible.`,
+        content: `${interaction.user} ${helperRole ? helperRole : ''}\n\n> ⏳ Por favor sé paciente, un miembro del staff te atenderá lo más pronto posible.`,
         embeds: [embed],
         components: [botones]
       });
@@ -182,6 +179,29 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#00FF00')
         .setDescription(`📌 ${interaction.user} ha reclamado este ticket.`)
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId === 'liberar_ticket') {
+      const data = await db.get(`ticket_${interaction.channel.id}`);
+      if (!data) return interaction.reply({ content: '❌ No se encontró info de este ticket.', ephemeral: true });
+      if (!data.claimedBy) return interaction.reply({ content: '❌ Este ticket no está reclamado.', ephemeral: true });
+      if (data.claimedBy !== interaction.user.id && !interaction.member.permissions.has('Administrator')) {
+        return interaction.reply({ content: '❌ Solo quien reclamó el ticket puede liberarlo.', ephemeral: true });
+      }
+
+      const claims = (await db.get(`claims_${interaction.guild.id}_${data.claimedBy}`)) || 0;
+      if (claims > 0) await db.set(`claims_${interaction.guild.id}_${data.claimedBy}`, claims - 1);
+
+      data.claimedBy = null;
+      await db.set(`ticket_${interaction.channel.id}`, data);
+
+      const embed = new EmbedBuilder()
+        .setColor('#FFA500')
+        .setDescription(`🔓 ${interaction.user} ha liberado este ticket.`)
         .setTimestamp();
 
       await interaction.reply({ embeds: [embed] });

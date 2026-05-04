@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, QuickDB: QDB } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { QuickDB } = require('quick.db');
 const db = new QuickDB();
 
@@ -16,12 +16,6 @@ module.exports = {
       return;
     }
 
-    // Respuestas automáticas
-    const contenido = message.content.toLowerCase();
-    if (contenido === 'hola') message.reply('¡Hola! ¿En qué te puedo ayudar?');
-    if (contenido === 'ping') message.reply('🏓 Pong!');
-
-    // Prefijo ! o mención al bot
     const prefix = process.env.PREFIX || '!';
     const botMention = `<@${message.client.user.id}>`;
     const botMention2 = `<@!${message.client.user.id}>`;
@@ -35,11 +29,10 @@ module.exports = {
     const args = message.content.slice(usedPrefix.length).trim().split(/ +/);
     const comando = args.shift().toLowerCase();
 
-    // !ban @usuario razón
     if (comando === 'ban') {
       if (!message.member.permissions.has('BanMembers')) return message.reply('❌ No tienes permisos.');
       const usuario = message.mentions.members.first();
-      if (!usuario) return message.reply('❌ Menciona un usuario. Ej: `!ban @usuario razón`');
+      if (!usuario) return message.reply('❌ Usa: `!ban @usuario razón`');
       const razon = args.slice(1).join(' ') || 'Sin razón';
       await usuario.ban({ reason: razon });
       message.reply(`✅ **${usuario.user.tag}** fue baneado. Razón: ${razon}`);
@@ -48,7 +41,7 @@ module.exports = {
     else if (comando === 'kick') {
       if (!message.member.permissions.has('KickMembers')) return message.reply('❌ No tienes permisos.');
       const usuario = message.mentions.members.first();
-      if (!usuario) return message.reply('❌ Menciona un usuario. Ej: `!kick @usuario`');
+      if (!usuario) return message.reply('❌ Usa: `!kick @usuario`');
       await usuario.kick();
       message.reply(`✅ **${usuario.user.tag}** fue expulsado.`);
     }
@@ -154,7 +147,6 @@ module.exports = {
 
     else if (comando === 'panel') {
       if (!message.member.permissions.has('Administrator')) return message.reply('❌ No tienes permisos.');
-      const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
         .setTitle('🎫 Sistema de Tickets')
@@ -195,7 +187,6 @@ module.exports = {
 
     else if (comando === 'verificar') {
       if (!message.member.permissions.has('Administrator')) return message.reply('❌ No tienes permisos.');
-      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
       const nombreRol = args.join(' ');
       if (!nombreRol) return message.reply('❌ Usa: `!verificar NombreDelRol`');
       const rol = message.guild.roles.cache.find(r => r.name === nombreRol);
@@ -217,7 +208,6 @@ module.exports = {
 
     else if (comando === 'roles') {
       if (!message.member.permissions.has('Administrator')) return message.reply('❌ No tienes permisos.');
-      const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
       const nombresRoles = args.join(' ').split(',').map(r => r.trim());
       const rolesEncontrados = nombresRoles.map(nombre =>
         message.guild.roles.cache.find(r => r.name === nombre)
@@ -243,11 +233,10 @@ module.exports = {
       await message.channel.send({ embeds: [embed], components: [menu] });
       await message.delete().catch(() => {});
     }
-else if (comando === 'testwelcome') {
+
+    else if (comando === 'testwelcome') {
       const canal = message.guild.channels.cache.get(process.env.WELCOME_CHANNEL);
-      if (!canal) return message.reply('❌ Canal de bienvenidas no encontrado. Verifica el WELCOME_CHANNEL en .env');
-      
-      const { EmbedBuilder } = require('discord.js');
+      if (!canal) return message.reply('❌ Canal de bienvenidas no encontrado.');
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
         .setAuthor({ name: message.guild.name, iconURL: message.guild.iconURL() })
@@ -261,10 +250,10 @@ else if (comando === 'testwelcome') {
         .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 256 }))
         .setFooter({ text: `ID: ${message.author.id}` })
         .setTimestamp();
-
       await canal.send({ content: `${message.author}`, embeds: [embed] });
       await message.reply('✅ Bienvenida de prueba enviada!');
     }
+
     else if (comando === 'ping') {
       message.reply(`🏓 Pong! **${message.client.ws.ping}ms**`);
     }
@@ -279,9 +268,10 @@ else if (comando === 'testwelcome') {
           { name: '🎫 Tickets', value: '`!panel` `!add ID`', inline: false },
           { name: '⚙️ Config', value: '`!logs #canal` `!verificar Rol` `!roles Rol1, Rol2`', inline: false },
           { name: '📊 Info', value: '`!nivel @user` `!balance @user` `!daily` `!top` `!ping`', inline: false },
+          { name: '🧪 Test', value: '`!testwelcome`', inline: false },
         )
         .setTimestamp();
       message.reply({ embeds: [embed] });
     }
   }
-}; 
+};
