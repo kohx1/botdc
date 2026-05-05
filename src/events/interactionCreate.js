@@ -172,8 +172,7 @@ const canal = await interaction.guild.channels.create({
       await interaction.editReply({ content: `✅ Tu ticket fue creado: ${canal}` });
       return;
     }
-
-    if (interaction.isButton() && interaction.customId === 'claim_ticket') {
+if (interaction.isButton() && interaction.customId === 'claim_ticket') {
       const data = await db.get(`ticket_${interaction.channel.id}`);
       if (!data) return interaction.reply({ content: '❌ No se encontró info de este ticket.', ephemeral: true });
       if (data.claimedBy) return interaction.reply({ content: `❌ Este ticket ya fue reclamado por <@${data.claimedBy}>.`, ephemeral: true });
@@ -184,6 +183,33 @@ const canal = await interaction.guild.channels.create({
       const claims = (await db.get(`claims_${interaction.guild.id}_${interaction.user.id}`)) || 0;
       await db.set(`claims_${interaction.guild.id}_${interaction.user.id}`, claims + 1);
 
+      // Roles que pueden ver pero NO escribir cuando está reclamado
+      const rolesSoloVer = ['Helper', 'Jr.Mod', 'Mod'];
+      for (const nombreRol of rolesSoloVer) {
+        const rol = interaction.guild.roles.cache.find(r => r.name === nombreRol);
+        if (rol) {
+          await interaction.channel.permissionOverwrites.edit(rol.id, {
+            ViewChannel: true,
+            SendMessages: false,
+            ReadMessageHistory: true,
+          });
+        }
+      }
+
+      // Roles que siempre pueden escribir aunque esté reclamado
+      const rolesSiempreEscriben = ['Sr.Admin', 'Jr.Admin', 'Manager', '!Manager +', 'Configurador', '!Founder', 'MineRush'];
+      for (const nombreRol of rolesSiempreEscriben) {
+        const rol = interaction.guild.roles.cache.find(r => r.name === nombreRol);
+        if (rol) {
+          await interaction.channel.permissionOverwrites.edit(rol.id, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true,
+          });
+        }
+      }
+
+      // El que reclamó puede escribir
       await interaction.channel.permissionOverwrites.edit(interaction.user.id, {
         ViewChannel: true, SendMessages: true
       });
