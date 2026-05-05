@@ -223,7 +223,7 @@ if (interaction.isButton() && interaction.customId === 'claim_ticket') {
       return;
     }
 
-    if (interaction.isButton() && interaction.customId === 'liberar_ticket') {
+   if (interaction.isButton() && interaction.customId === 'liberar_ticket') {
       const data = await db.get(`ticket_${interaction.channel.id}`);
       if (!data) return interaction.reply({ content: '❌ No se encontró info de este ticket.', ephemeral: true });
       if (!data.claimedBy) return interaction.reply({ content: '❌ Este ticket no está reclamado.', ephemeral: true });
@@ -236,6 +236,19 @@ if (interaction.isButton() && interaction.customId === 'claim_ticket') {
 
       data.claimedBy = null;
       await db.set(`ticket_${interaction.channel.id}`, data);
+
+      // Restaurar permisos de escritura a todos los roles staff
+      const todosRolesStaff = ['Helper', 'Jr.Mod', 'Mod', 'Sr.Admin', 'Jr.Admin', 'Manager', '!Manager +', 'Configurador', '!Founder', 'MineRush'];
+      for (const nombreRol of todosRolesStaff) {
+        const rol = interaction.guild.roles.cache.find(r => r.name === nombreRol);
+        if (rol) {
+          await interaction.channel.permissionOverwrites.edit(rol.id, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true,
+          });
+        }
+      }
 
       const embed = new EmbedBuilder()
         .setColor('#FFA500')
